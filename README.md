@@ -1,2 +1,2 @@
-# random-_number_gen
+# random_number_gen
 makes a random number 
