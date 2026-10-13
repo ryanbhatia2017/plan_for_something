@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Spinner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #1a1a2e;
+    --text: #eee;
+    --card: #16213e;
+    --card-border: #16213e;
+    --wheel-bg: #16213e;
+    --wheel-stroke: #333;
+    --wheel-text-empty: #555;
+    --wheel-line: #1a1a2e;
+    --center-fill: #1a1a2e;
+    --result-bg: #eee;
+    --result-text: #0f3460;
+    --tag-bg: #16213e;
+  }
+  body.light {
+    --bg: #f0f0f5;
+    --text: #222;
+    --card: #fff;
+    --card-border: #ccc;
+    --wheel-bg: #ddd;
+    --wheel-stroke: #aaa;
+    --wheel-text-empty: #999;
+    --wheel-line: #f0f0f5;
+    --center-fill: #f0f0f5;
+    --result-bg: #0f3460;
+    --result-text: #fff;
+    --tag-bg: #e0e0e8;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    user-select: none;
+    transition: background 0.3s, color 0.3s;
+  }
+  h1 {
+    font-size: 2.2rem;
+    margin-bottom: 20px;
+    color: #e94560;
+    cursor: default;
+  }
+  .theme-toggle {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: var(--card);
+    border: 2px solid var(--card-border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background 0.3s;
+  }
+  .theme-toggle:hover { opacity: 0.8; }
+  .input-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .input-area input {
+    padding: 10px 16px;
+    border: 2px solid var(--card-border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    width: 220px;
+  }
+  .input-area input:focus { border-color: #e94560; }
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-add { background: #e94560; color: #fff; }
+  .btn-add:hover { background: #c73650; }
+  .btn-spin { background: #0f3460; color: #fff; font-size: 1.3rem; padding: 14px 40px; margin-top: 20px; }
+  .btn-spin:hover { background: #1a4a7a; }
+  .btn-spin:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .words-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    justify-content: center;
+    max-width: 600px;
+  }
+  .word-tag {
+    background: var(--tag-bg);
+    padding: 6px 14px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+  }
+  .word-tag .remove {
+    cursor: pointer;
+    color: #e94560;
+    font-weight: bold;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .word-tag .remove:hover { color: #ff6b81; }
+
+  .wheel-container {
+    position: relative;
+    margin: 10px 0 10px;
+  }
+  .pointer {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 30px solid #e94560;
+    z-index: 10;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }
+  canvas { display: block; }
+
+  .result {
+    font-size: 2rem;
+    margin-top: 16px;
+    min-height: 50px;
+    color: var(--result-text);
+    background: var(--result-bg);
+    padding: 10px 30px;
+    border-radius: 12px;
+    font-weight: bold;
+    visibility: hidden;
+  }
+  .result.show { visibility: visible; animation: pop 0.3s ease; }
+  @keyframes pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Secret panel */
+  .secret-panel {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .secret-panel.open { display: flex; }
+  .secret-inner {
+    background: var(--card);
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .secret-inner h2 { margin-bottom: 16px; color: #e94560; font-size: 1.3rem; }
+  .weight-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .weight-row label {
+    flex: 1;
+    font-size: 1rem;
+  }
+  .weight-row input[type="range"] {
+    flex: 2;
+    accent-color: #e94560;
+  }
+  .weight-row .weight-val {
+    width: 45px;
+    text-align: right;
+    font-size: 0.9rem;
+    color: #aaa;
+  }
+  .secret-close {
+    margin-top: 16px;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">&#9788;</button>
+<h1 id="title">Word Spinner</h1>
+
+<div class="input-area">
+  <input type="text" id="wordInput" placeholder="Enter a word..." maxlength="30">
+  <button class="btn btn-add" id="addBtn">Add</button>
+</div>
+
+<div class="words-list" id="wordsList"></div>
+
+<div class="wheel-container">
+  <div class="pointer"></div>
+  <canvas id="wheel" width="400" height="400"></canvas>
+</div>
+
+<button class="btn btn-spin" id="spinBtn">SPIN</button>
+<div class="result" id="result"></div>
+
+<!-- Secret panel -->
+<div class="secret-panel" id="secretPanel">
+  <div class="secret-inner">
+    <h2>Adjust Weights</h2>
+    <div id="weightControls"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="secret-close" id="secretReset">Reset</button>
+      <button class="secret-close" id="secretClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  '#e94560','#0f3460','#533483','#e76f51','#2a9d8f',
+  '#e9c46a','#264653','#f4a261','#6a4c93','#1982c4',
+  '#8ac926','#ff595e','#ffca3a','#6a0572','#1b998b'
+];
+
+let words = [];
+let weights = {};
+let spinning = false;
+
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const wordInput = document.getElementById('wordInput');
+const addBtn = document.getElementById('addBtn');
+const spinBtn = document.getElementById('spinBtn');
+const resultEl = document.getElementById('result');
+const wordsList = document.getElementById('wordsList');
+const secretPanel = document.getElementById('secretPanel');
+const weightControls = document.getElementById('weightControls');
+const secretClose = document.getElementById('secretClose');
+const title = document.getElementById('title');
+
+let currentAngle = 0;
+
+function addWord(w) {
+  w = w.trim();
+  if (!w || words.includes(w)) return;
+  words.push(w);
+  weights[w] = 1;
+  renderTags();
+  drawWheel();
+}
+
+function removeWord(w) {
+  words = words.filter(x => x !== w);
+  delete weights[w];
+  renderTags();
+  drawWheel();
+}
+
+function renderTags() {
+  wordsList.innerHTML = '';
+  words.forEach(w => {
+    const tag = document.createElement('div');
+    tag.className = 'word-tag';
+    tag.innerHTML = `<span>${w}</span><span class="remove" data-word="${w}">&times;</span>`;
+    wordsList.appendChild(tag);
+  });
+}
+
+function drawWheel() {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r = cx - 10;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (words.length === 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = getVar('--wheel-bg');
+    ctx.fill();
+    ctx.strokeStyle = getVar('--wheel-stroke');
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = getVar('--wheel-text-empty');
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Add words to start', cx, cy);
+    return;
+  }
+
+  // Equal visual slices
+  const sliceAngle = (Math.PI * 2) / words.length;
+
+  words.forEach((w, i) => {
+    const startAngle = currentAngle + i * sliceAngle;
+    const endAngle = startAngle + sliceAngle;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = getVar('--wheel-line');
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(startAngle + sliceAngle / 2);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.min(18, 200 / words.length + 10)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const textR = r * 0.62;
+    ctx.fillText(w.length > 12 ? w.slice(0, 11) + '..' : w, textR, 0);
+    ctx.restore();
+  });
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+  ctx.fillStyle = getVar('--center-fill');
+  ctx.fill();
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function pickWeightedIndex() {
+  const totalWeight = words.reduce((s, w) => s + (weights[w] || 1), 0);
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < words.length; i++) {
+    r -= (weights[words[i]] || 1);
+    if (r <= 0) return i;
+  }
+  return words.length - 1;
+}
+
+function spin() {
+  if (spinning || words.length < 2) return;
+  spinning = true;
+  spinBtn.disabled = true;
+  resultEl.classList.remove('show');
+
+  const winnerIdx = pickWeightedIndex();
+
+  // Calculate where the pointer is: top center = -PI/2 (or 3PI/2)
+  // We need the winner slice to end up under the pointer
+  const sliceAngle = (Math.PI * 2) / words.length;
+  // Target: the middle of the winner slice should be at -PI/2 (top)
+  const targetSliceMiddle = winnerIdx * sliceAngle + sliceAngle / 2;
+  // Add some randomness within the slice
+  const jitter = (Math.random() - 0.5) * sliceAngle * 0.7;
+  // The angle at pointer is -PI/2, so: currentAngle + targetSliceMiddle = -PI/2 + 2PI*k
+  // So finalAngle = -PI/2 - targetSliceMiddle - jitter + fullSpins
+  const fullSpins = Math.PI * 2 * (5 + Math.floor(Math.random() * 5));
+  const finalAngle = -Math.PI / 2 - targetSliceMiddle - jitter + fullSpins;
+  const startAngle = currentAngle;
+  const totalRotation = finalAngle - startAngle;
+
+  const duration = 4000 + Math.random() * 2000;
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    // Ease out cubic
+    const ease = 1 - Math.pow(1 - t, 3);
+    currentAngle = startAngle + totalRotation * ease;
+    drawWheel();
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      currentAngle = currentAngle % (Math.PI * 2);
+      spinning = false;
+      spinBtn.disabled = false;
+      resultEl.textContent = words[winnerIdx];
+      resultEl.classList.add('show');
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function getVar(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+// Theme toggle
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('light');
+  themeToggle.innerHTML = document.body.classList.contains('light') ? '&#9790;' : '&#9788;';
+  drawWheel();
+});
+
+// Secret panel: triple-click the title to open
+let clickCount = 0;
+let clickTimer = null;
+title.addEventListener('click', () => {
+  clickCount++;
+  clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => { clickCount = 0; }, 500);
+  if (clickCount >= 3) {
+    clickCount = 0;
+    openSecret();
+  }
+});
+
+function openSecret() {
+  weightControls.innerHTML = '';
+  if (words.length === 0) return;
+  words.forEach(w => {
+    const row = document.createElement('div');
+    row.className = 'weight-row';
+    const wt = weights[w] || 1;
+    row.innerHTML = `
+      <label>${w}</label>
+      <input type="range" min="1" max="100" value="${wt}" data-word="${w}">
+      <span class="weight-val">${wt}</span>
+    `;
+    weightControls.appendChild(row);
+  });
+  secretPanel.classList.add('open');
+}
+
+weightControls.addEventListener('input', (e) => {
+  if (e.target.type === 'range') {
+    const w = e.target.dataset.word;
+    const v = parseInt(e.target.value);
+    weights[w] = v;
+    e.target.nextElementSibling.textContent = v;
+  }
+});
+
+document.getElementById('secretReset').addEventListener('click', () => {
+  words.forEach(w => { weights[w] = 1; });
+  openSecret();
+});
+
+secretClose.addEventListener('click', () => {
+  secretPanel.classList.remove('open');
+});
+
+secretPanel.addEventListener('click', (e) => {
+  if (e.target === secretPanel) secretPanel.classList.remove('open');
+});
+
+addBtn.addEventListener('click', () => {
+  addWord(wordInput.value);
+  wordInput.value = '';
+  wordInput.focus();
+});
+
+wordInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    addWord(wordInput.value);
+    wordInput.value = '';
+  }
+});
+
+wordsList.addEventListener('click', (e) => {
+  if (e.target.classList.contains('remove')) {
+    removeWord(e.target.dataset.word);
+  }
+});
+
+spinBtn.addEventListener('click', spin);
+
+drawWheel();
+</script>
+</body>
+</html>
