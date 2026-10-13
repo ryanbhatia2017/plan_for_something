@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Number Generator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f0f4f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #2d3436;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 32px;
+    width: 100%;
+    max-width: 520px;
+    margin-bottom: 24px;
+  }
+
+  .result-display {
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .result-number {
+    font-size: 96px;
+    font-weight: 700;
+    color: #4361ee;
+    line-height: 1;
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+  }
+
+  .result-number.spinning {
+    animation: spin-blur 0.08s infinite;
+  }
+
+  @keyframes spin-blur {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.97); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .generate-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    background: #4361ee;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 16px;
+  }
+
+  .generate-btn:hover { background: #3a56d4; }
+  .generate-btn:active { transform: scale(0.98); }
+
+  .range-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .range-row label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #636e72;
+    min-width: 36px;
+  }
+
+  .range-row input {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 16px;
+    border: 2px solid #dfe6e9;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .range-row input:focus { border-color: #4361ee; }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #636e72;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+
+  /* Secret panel - bottom right corner */
+  .secret-toggle {
+    position: fixed;
+    bottom: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dfe6e9;
+    border: none;
+    cursor: pointer;
+    z-index: 1000;
+    padding: 0;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+
+  .secret-toggle:hover {
+    opacity: 0.8;
+  }
+
+  .secret-panel {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 8px;
+    width: 240px;
+    max-height: 320px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    padding: 10px;
+    z-index: 999;
+    font-size: 11px;
+    overflow-y: auto;
+  }
+
+  .secret-panel.open {
+    display: block;
+  }
+
+  .secret-panel .sp-title {
+    font-size: 10px;
+    color: #b2bec3;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .secret-panel .sp-reset {
+    font-size: 9px;
+    color: #b2bec3;
+    background: none;
+    border: 1px solid #dfe6e9;
+    border-radius: 4px;
+    padding: 1px 6px;
+    cursor: pointer;
+    margin-left: 6px;
+  }
+
+  .secret-panel .sp-reset:hover {
+    color: #636e72;
+    border-color: #b2bec3;
+  }
+
+  .secret-panel .sp-info {
+    font-size: 9px;
+    color: #ccc;
+    margin-bottom: 6px;
+  }
+
+  .weight-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 3px;
+  }
+
+  .weight-row .num-label {
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 24px;
+    text-align: right;
+    color: #636e72;
+  }
+
+  .weight-row input[type="range"] {
+    flex: 1;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e8e8e8;
+    border-radius: 2px;
+    outline: none;
+  }
+
+  .weight-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #999;
+    cursor: pointer;
+  }
+
+  .weight-row .weight-val {
+    font-size: 9px;
+    font-weight: 600;
+    min-width: 30px;
+    text-align: right;
+    color: #999;
+  }
+
+  .too-many-msg {
+    font-size: 10px;
+    color: #ccc;
+    text-align: center;
+    padding: 8px;
+  }
+
+  .history {
+    text-align: center;
+  }
+
+  .history-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #636e72;
+    margin-bottom: 8px;
+  }
+
+  .history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .history-item {
+    background: #f0f4f8;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3436;
+  }
+
+  .clear-history {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #b2bec3;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .clear-history:hover { color: #636e72; }
+</style>
+</head>
+<body>
+
+<h1>Random Number Generator</h1>
+
+<div class="card result-display">
+  <div class="result-number" id="result">?</div>
+  <button class="generate-btn" id="generateBtn">Generate</button>
+</div>
+
+<div class="card">
+  <div class="section-title">Range</div>
+  <div class="range-row">
+    <label for="minVal">Min</label>
+    <input type="number" id="minVal" value="1">
+  </div>
+  <div class="range-row" style="margin-top: 10px;">
+    <label for="maxVal">Max</label>
+    <input type="number" id="maxVal" value="10">
+  </div>
+
+</div>
+
+<div class="card history" id="historyCard" style="display:none;">
+  <div class="history-title">History</div>
+  <div class="history-list" id="historyList"></div>
+  <button class="clear-history" id="clearHistory">Clear</button>
+</div>
+
+<button class="secret-toggle" id="secretToggle"></button>
+<div class="secret-panel" id="secretPanel">
+  <div class="sp-title">Weights <button class="sp-reset" id="resetWeights">Reset</button></div>
+  <div class="sp-info">Slide to bias numbers</div>
+  <div id="weightsList"></div>
+</div>
+
+<script>
+  const minInput = document.getElementById('minVal');
+  const maxInput = document.getElementById('maxVal');
+  const resultEl = document.getElementById('result');
+  const generateBtn = document.getElementById('generateBtn');
+  const secretToggle = document.getElementById('secretToggle');
+  const secretPanel = document.getElementById('secretPanel');
+  const weightsList = document.getElementById('weightsList');
+  const historyCard = document.getElementById('historyCard');
+  const historyList = document.getElementById('historyList');
+  const clearHistory = document.getElementById('clearHistory');
+
+  let weights = {};
+  let customActive = false;
+  let history = [];
+  const MAX_CUSTOM_NUMBERS = 100;
+
+  secretToggle.addEventListener('click', () => {
+    secretPanel.classList.toggle('open');
+    if (secretPanel.classList.contains('open')) {
+      customActive = true;
+      buildWeightSliders();
+    }
+  });
+
+  // Close panel when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!secretPanel.contains(e.target) && e.target !== secretToggle) {
+      secretPanel.classList.remove('open');
+    }
+  });
+
+  // Reset weights to equal
+  function resetWeights() {
+    weights = {};
+    customActive = false;
+    buildWeightSliders();
+  }
+
+  document.getElementById('resetWeights').addEventListener('click', resetWeights);
+
+  // Double-click the dot to reset and close
+  secretToggle.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    resetWeights();
+    secretPanel.classList.remove('open');
+  });
+
+  function buildWeightSliders() {
+    const min = parseInt(minInput.value) || 0;
+    const max = parseInt(maxInput.value) || 0;
+    const count = max - min + 1;
+    weightsList.innerHTML = '';
+
+    if (count < 1 || count > MAX_CUSTOM_NUMBERS) {
+      weightsList.innerHTML = count < 1
+        ? '<div class="too-many-msg">Max must be greater than or equal to Min.</div>'
+        : `<div class="too-many-msg">Custom weights available for up to ${MAX_CUSTOM_NUMBERS} numbers. Current range has ${count}.</div>`;
+      return;
+    }
+
+    for (let n = min; n <= max; n++) {
+      const row = document.createElement('div');
+      row.className = 'weight-row';
+
+      const label = document.createElement('span');
+      label.className = 'num-label';
+      label.textContent = n;
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = '0';
+      slider.max = '100';
+      slider.value = weights[n] !== undefined ? weights[n] : 50;
+      slider.dataset.num = n;
+
+      const val = document.createElement('span');
+      val.className = 'weight-val';
+
+      function updateVal() {
+        weights[n] = parseInt(slider.value);
+        const total = Object.values(weights).reduce((a, b) => a + b, 0);
+        val.textContent = total > 0 ? (weights[n] / total * 100).toFixed(1) + '%' : '0%';
+      }
+
+      slider.addEventListener('input', () => {
+        updateVal();
+        // Update all displayed percentages
+        document.querySelectorAll('.weight-row input[type="range"]').forEach(s => {
+          const num = parseInt(s.dataset.num);
+          const total = Object.values(weights).reduce((a, b) => a + b, 0);
+          const display = s.parentElement.querySelector('.weight-val');
+          display.textContent = total > 0 ? (weights[num] / total * 100).toFixed(1) + '%' : '0%';
+        });
+      });
+
+      row.appendChild(label);
+      row.appendChild(slider);
+      row.appendChild(val);
+      weightsList.appendChild(row);
+
+      weights[n] = parseInt(slider.value);
+    }
+
+    // Update all percentages after all weights are set
+    document.querySelectorAll('.weight-row input[type="range"]').forEach(s => {
+      const num = parseInt(s.dataset.num);
+      const total = Object.values(weights).reduce((a, b) => a + b, 0);
+      const display = s.parentElement.querySelector('.weight-val');
+      display.textContent = total > 0 ? (weights[num] / total * 100).toFixed(1) + '%' : '0%';
+    });
+
+    // Clean up weights for numbers no longer in range
+    for (const key of Object.keys(weights)) {
+      const k = parseInt(key);
+      if (k < min || k > max) delete weights[k];
+    }
+  }
+
+  // Rebuild sliders when range changes
+  minInput.addEventListener('change', () => { if (customActive) buildWeightSliders(); });
+  maxInput.addEventListener('change', () => { if (customActive) buildWeightSliders(); });
+
+  function weightedRandom(min, max) {
+    const entries = [];
+    for (let n = min; n <= max; n++) {
+      const w = weights[n] !== undefined ? weights[n] : 50;
+      entries.push({ num: n, weight: w });
+    }
+    const totalWeight = entries.reduce((s, e) => s + e.weight, 0);
+    if (totalWeight === 0) return min + Math.floor(Math.random() * (max - min + 1));
+
+    let r = Math.random() * totalWeight;
+    for (const e of entries) {
+      r -= e.weight;
+      if (r <= 0) return e.num;
+    }
+    return entries[entries.length - 1].num;
+  }
+
+  function generate() {
+    const min = parseInt(minInput.value);
+    const max = parseInt(maxInput.value);
+    if (isNaN(min) || isNaN(max) || min > max) {
+      resultEl.textContent = '!';
+      return;
+    }
+
+    generateBtn.disabled = true;
+    resultEl.classList.add('spinning');
+
+    let ticks = 0;
+    const totalTicks = 15;
+    const interval = setInterval(() => {
+      resultEl.textContent = min + Math.floor(Math.random() * (max - min + 1));
+      ticks++;
+      if (ticks >= totalTicks) {
+        clearInterval(interval);
+        const final = customActive ? weightedRandom(min, max) : min + Math.floor(Math.random() * (max - min + 1));
+        resultEl.textContent = final;
+        resultEl.classList.remove('spinning');
+        generateBtn.disabled = false;
+
+        history.unshift(final);
+        if (history.length > 20) history.pop();
+        renderHistory();
+      }
+    }, 60);
+  }
+
+  function renderHistory() {
+    if (history.length === 0) {
+      historyCard.style.display = 'none';
+      return;
+    }
+    historyCard.style.display = 'block';
+    historyList.innerHTML = '';
+    for (const h of history) {
+      const span = document.createElement('span');
+      span.className = 'history-item';
+      span.textContent = h;
+      historyList.appendChild(span);
+    }
+  }
+
+  generateBtn.addEventListener('click', generate);
+  clearHistory.addEventListener('click', () => {
+    history = [];
+    renderHistory();
+  });
+
+  // Keyboard shortcut: Enter or Space to generate
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && document.activeElement.tagName !== 'INPUT') generate();
+  });
+</script>
+
+</body>
+</html>
